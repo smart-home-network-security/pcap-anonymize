@@ -1,0 +1,9 @@
+# Config folders
+.vscode
+.venv
+
+# Build folders
+__pycache__
+build
+dist
+*.egg-info
