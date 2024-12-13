@@ -2,11 +2,12 @@
 Anonymize MAC addresses.
 """
 
-import random
-import secrets
+from hashlib import sha256
 from scapy.layers.l2 import Ether, ARP
+from scapy.layers.dhcp import DHCP
 
 BASE_HEX = 16
+BYTE_ORDER = "big"
 
 # Special, well-known MAC addresses
 special_macs = [
@@ -78,17 +79,33 @@ def anonymize_mac(mac: str) -> str:
     ul_bit = get_ul_bit(mac)
     is_local = bool(ul_bit)  # True ==> LAA, False ==> UAA
 
-    # Locally administered address
+    ## Locally administered address
     if is_local:
         bit_mask = ig_bit | ul_bit
-        first_byte = (random.getrandbits(6) << 2) | bit_mask  # Keep I/G and U/L bits
-        return f"{first_byte:02x}:" + ':'.join(secrets.token_hex(1) for _ in range(5))
+
+        # Compute SHA-256 hash of the MAC address
+        mac_sha256 = sha256()
+        for byte in mac_split:
+            mac_sha256.update(int(byte, BASE_HEX).to_bytes(1, BYTE_ORDER))
+        digest = mac_sha256.digest()
+
+        first_byte = (digest[0] & 0b11111100) | bit_mask  # Keep I/G and U/L bits
+        return f"{first_byte:02x}:" + ':'.join(f"{digest[i]:02x}" for i in range(1, 6))
     
-    # Universally administered address
+
+    ## Universally administered address
+    
+    # Compute SHA-256 hash based on the three least-significant bytes
+    mac_sha256 = sha256()
+    for byte in mac_split[3:]:
+        mac_sha256.update(int(byte, BASE_HEX).to_bytes(1, BYTE_ORDER))
+    digest = mac_sha256.digest()
+
+    # Keep OUI and anonymize the rest
     return (
-        ':'.join(mac_split[:3]) +                         # Keep OUI
+        ':'.join(mac_split[:3]) +                          # Keep OUI
         ':' +
-        ':'.join(secrets.token_hex(1) for _ in range(3))  # Random last 3 bytes
+        ':'.join(f"{digest[i]:02x}" for i in range(0, 3))  # Hashed last 3 bytes
     )
     
 
@@ -118,3 +135,17 @@ def anonymize_arp(arp: ARP) -> ARP:
     arp.setfieldval("hwsrc", anonymize_mac(arp.getfieldval("hwsrc")))
     arp.setfieldval("hwdst", anonymize_mac(arp.getfieldval("hwdst")))
     return arp
+
+
+def anonymize_dhcp(dhcp: DHCP) -> DHCP:
+    """
+    Anonymize a packet's DHCP layer.
+    
+    Args:
+        dhcp (scapy.DHCP): DHCP layer to anonymize
+    Returns:
+        scapy.DHCP: anonymized DHCP layer
+    """
+    # Anonymize client MAC address
+    dhcp.setfieldval("chaddr", anonymize_mac(dhcp.getfieldval("chaddr")))
+    return dhcp

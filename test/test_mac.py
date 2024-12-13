@@ -1,8 +1,5 @@
 from pcap_anonymize.layers.mac import get_ig_bit, get_ul_bit, anonymize_mac
 
-# Number of random MAC addresses to generate per unit test
-N_TESTS = 5
-
 
 ### TEST FUNCTIONS ###
 
@@ -41,15 +38,11 @@ def test_anonymize_mac_laa() -> None:
     All bits should be anonymized except the I/G and U/L bits.
     """
     mac_laa = "02:00:00:00:00:00"
-
-    # Generate N anonymized MAC addresses,
-    # and verify they are correct
-    for _ in range(N_TESTS):
-        mac_laa_anon = anonymize_mac(mac_laa)
-        assert mac_laa_anon != mac_laa
-        # Verify I/G and U/L bits
-        assert get_ig_bit(mac_laa) == get_ig_bit(mac_laa_anon)
-        assert get_ul_bit(mac_laa) == get_ul_bit(mac_laa_anon)
+    mac_laa_anon = anonymize_mac(mac_laa)
+    assert mac_laa_anon != mac_laa
+    # Verify I/G and U/L bits
+    assert get_ig_bit(mac_laa) == get_ig_bit(mac_laa_anon)
+    assert get_ul_bit(mac_laa) == get_ul_bit(mac_laa_anon)
 
 
 def test_anonymize_mac_uaa() -> None:
@@ -60,10 +53,6 @@ def test_anonymize_mac_uaa() -> None:
     and the 3 last bytes should be anonymized.
     """
     mac_uaa = "00:11:22:33:44:55"
-
-    # Generate N anonymized MAC addresses,
-    # and verify they are correct
-    for _ in range(N_TESTS):
-        mac_uaa_anon = anonymize_mac(mac_uaa)
-        assert mac_uaa_anon.startswith(mac_uaa[:8])  # Vendor's OUI is kept
-        assert mac_uaa_anon[10:] != mac_uaa[10:]     # Last 3 bytes are anonymized
+    mac_uaa_anon = anonymize_mac(mac_uaa)
+    assert mac_uaa_anon.startswith(mac_uaa[:8])  # Vendor's OUI is kept
+    assert mac_uaa_anon[10:] != mac_uaa[10:]     # Last 3 bytes are anonymized
