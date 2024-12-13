@@ -2,6 +2,7 @@
 Anonymize MAC addresses.
 """
 
+import random
 import secrets
 from scapy.layers.l2 import Ether, ARP
 
@@ -12,6 +13,36 @@ special_macs = [
     "00:00:00:00:00:00",  # Default
     "ff:ff:ff:ff:ff:ff"   # Broadcast
 ]
+
+
+def get_ig_bit(mac: str) -> int:
+    """
+    Get the I/G bit of a given MAC address.
+
+    Args:
+        mac (str): MAC address to get the I/G bit from
+    Returns:
+        int: 8-bit integer with the I/G bit set to its corresponding value,
+             and all other bits set to 0 
+    """
+    first_byte = int(mac.split(":")[0], BASE_HEX)
+    ig_mask = 0b00000001
+    return first_byte & ig_mask
+
+
+def get_ul_bit(mac: str) -> int:
+    """
+    Get the U/L bit of a given MAC address.
+
+    Args:
+        mac (str): MAC address to get the U/L bit from
+    Returns:
+        int: 8-bit integer with the U/L bit set to its corresponding value,
+             and all other bits set to 0 
+    """
+    first_byte = int(mac.split(":")[0], BASE_HEX)
+    ul_mask = 0b00000010
+    return first_byte & ul_mask
 
 
 def anonymize_mac(mac: str) -> str:
@@ -33,9 +64,7 @@ def anonymize_mac(mac: str) -> str:
     ## I/G bit: first byte, least-significant bit
     # I/G bit = 0 ==> Unicast address
     # I/G bit = 1 ==> Multicast address
-    first_byte = int(mac_split[0], BASE_HEX)
-    ig_mask = 0b00000001
-    ig_bit = first_byte & ig_mask
+    ig_bit = get_ig_bit(mac)
     is_multicast = bool(ig_bit)  # True ==> Multicast, False ==> Unicast
 
     # Multicast address:
@@ -46,14 +75,14 @@ def anonymize_mac(mac: str) -> str:
     ## U/L bit: first byte, second least-significant bit
     # U/L bit = 0 ==> Universally administered address (UAA)
     # U/L bit = 1 ==> Locally administered address (LAA)
-    ul_mask = 0b00000010
-    ul_bit = first_byte & ul_mask
+    ul_bit = get_ul_bit(mac)
     is_local = bool(ul_bit)  # True ==> LAA, False ==> UAA
 
     # Locally administered address
     if is_local:
-        first_byte = (secrets.token_hex(1) & ig_bit) & ul_bit  # Keep I/G and U/L bits
-        return f"{first_byte:x}" + ':'.join(secrets.token_hex(1) for _ in range(5))
+        bit_mask = ig_bit | ul_bit
+        first_byte = (random.getrandbits(6) << 2) | bit_mask  # Keep I/G and U/L bits
+        return f"{first_byte:02x}:" + ':'.join(secrets.token_hex(1) for _ in range(5))
     
     # Universally administered address
     return (
