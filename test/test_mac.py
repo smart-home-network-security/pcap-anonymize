@@ -6,7 +6,7 @@ N_TESTS = 5
 
 ### TEST FUNCTIONS ###
 
-def test_get_ig_bit():
+def test_get_ig_bit() -> None:
     """
     Test the function `get_ig_bit`.
     """
@@ -15,7 +15,7 @@ def test_get_ig_bit():
     assert get_ig_bit("12:34:56:78:9a:bc") == 0b00000000
 
 
-def test_get_ul_bit():
+def test_get_ul_bit() -> None:
     """
     Test the function `get_ul_bit`.
     """
@@ -24,7 +24,7 @@ def test_get_ul_bit():
     assert get_ul_bit("12:34:56:78:9a:bc") == 0b00000010
 
 
-def test_anonymize_mac_multicast():
+def test_anonymize_mac_multicast() -> None:
     """
     Test the function `anonymize_mac`
     with a multicast MAC address.
@@ -34,7 +34,7 @@ def test_anonymize_mac_multicast():
     assert anonymize_mac(mac_multicast) == mac_multicast
 
 
-def test_anonymize_mac_laa():
+def test_anonymize_mac_laa() -> None:
     """
     Test the function `anonymize_mac`
     with a locally administered MAC address.
@@ -50,3 +50,20 @@ def test_anonymize_mac_laa():
         # Verify I/G and U/L bits
         assert get_ig_bit(mac_laa) == get_ig_bit(mac_laa_anon)
         assert get_ul_bit(mac_laa) == get_ul_bit(mac_laa_anon)
+
+
+def test_anonymize_mac_uaa() -> None:
+    """
+    Test the function `anonymize_mac`
+    with an universally administered MAC address.
+    The 3 first bytes (vendor's OUI) should be kept,
+    and the 3 last bytes should be anonymized.
+    """
+    mac_uaa = "00:11:22:33:44:55"
+
+    # Generate N anonymized MAC addresses,
+    # and verify they are correct
+    for _ in range(N_TESTS):
+        mac_uaa_anon = anonymize_mac(mac_uaa)
+        assert mac_uaa_anon.startswith(mac_uaa[:8])  # Vendor's OUI is kept
+        assert mac_uaa_anon[10:] != mac_uaa[10:]     # Last 3 bytes are anonymized
