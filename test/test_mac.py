@@ -1,4 +1,18 @@
-from pcap_anonymize.layers.mac import get_ig_bit, get_ul_bit, anonymize_mac
+from scapy.layers.l2 import Ether, ARP
+from pcap_anonymize.layers.mac import (
+    get_ig_bit, get_ul_bit,
+    anonymize_mac,
+    anonymize_ether,
+    anonymize_arp,
+    anonymize_dhcp
+)
+
+
+### TEST CONSTANTS ###
+
+mac_multicast = "01:00:00:00:00:00"
+mac_laa = "02:00:00:00:00:00"
+mac_uaa = "00:11:22:33:44:55"
 
 
 ### TEST FUNCTIONS ###
@@ -27,7 +41,6 @@ def test_anonymize_mac_multicast() -> None:
     with a multicast MAC address.
     The MAC address should not be anonymized.
     """
-    mac_multicast = "01:00:00:00:00:00"
     assert anonymize_mac(mac_multicast) == mac_multicast
 
 
@@ -37,7 +50,6 @@ def test_anonymize_mac_laa() -> None:
     with a locally administered MAC address.
     All bits should be anonymized except the I/G and U/L bits.
     """
-    mac_laa = "02:00:00:00:00:00"
     mac_laa_anon = anonymize_mac(mac_laa)
     assert mac_laa_anon != mac_laa
     # Verify I/G and U/L bits
@@ -52,7 +64,45 @@ def test_anonymize_mac_uaa() -> None:
     The 3 first bytes (vendor's OUI) should be kept,
     and the 3 last bytes should be anonymized.
     """
-    mac_uaa = "00:11:22:33:44:55"
     mac_uaa_anon = anonymize_mac(mac_uaa)
     assert mac_uaa_anon.startswith(mac_uaa[:8])  # Vendor's OUI is kept
     assert mac_uaa_anon[10:] != mac_uaa[10:]     # Last 3 bytes are anonymized
+
+
+def test_anonymize_ether_multicast() -> None:
+    """
+    Test the function `anonymize_ether`,
+    with multicast addresses.
+    """
+    ether_multicast = Ether(src=mac_multicast, dst=mac_multicast)
+    anonymize_ether(ether_multicast)
+    assert ether_multicast.src == mac_multicast
+    assert ether_multicast.dst == mac_multicast
+
+
+def test_anonymize_ether_laa() -> None:
+    """
+    Test the function `anonymize_ether`,
+    with locally administered addresses.
+    """
+    ether_laa = Ether(src=mac_laa, dst=mac_laa)
+    anonymize_ether(ether_laa)
+    assert ether_laa.src != mac_laa
+    assert get_ig_bit(ether_laa.src) == get_ig_bit(mac_laa)
+    assert get_ul_bit(ether_laa.src) == get_ul_bit(mac_laa)
+    assert ether_laa.dst != mac_laa
+    assert get_ig_bit(ether_laa.dst) == get_ig_bit(mac_laa)
+    assert get_ul_bit(ether_laa.dst) == get_ul_bit(mac_laa)
+
+
+def test_anonymize_ether_uaa() -> None:
+    """
+    Test the function `anonymize_ether`,
+    with universally administered addresses.
+    """
+    ether_laa = Ether(src=mac_uaa, dst=mac_uaa)
+    anonymize_ether(ether_laa)
+    assert ether_laa.src.startswith(mac_uaa[:8])
+    assert ether_laa.src[10:] != mac_uaa[10:]
+    assert ether_laa.dst.startswith(mac_uaa[:8])
+    assert ether_laa.dst[10:] != mac_uaa[10:]

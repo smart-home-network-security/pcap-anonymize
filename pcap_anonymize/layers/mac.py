@@ -154,6 +154,7 @@ def anonymize_dhcp(dhcp: BOOTP) -> BOOTP:
     # Anonymize client hardware address
     chaddr = dhcp.getfieldval("chaddr")[0:6]
     dhcp.setfieldval("chaddr", anonymize_mac(chaddr))
+    dhcp.show()
 
     # Check if BOOTP layer contains DHCP options
     options = dhcp.getfieldval("options")
