@@ -6,8 +6,9 @@ import os
 from pathlib import Path
 from scapy.all import Packet, sniff, wrpcap
 from scapy.layers.l2 import Ether, ARP
+from scapy.layers.dhcp import BOOTP
 # Packet layers
-from .layers.mac import anonymize_ether, anonymize_arp
+from .layers.mac import anonymize_ether, anonymize_arp, anonymize_dhcp
 
 
 ### GLOBAL VARIABLES ###
@@ -56,6 +57,12 @@ def anonymize_packet(packet: Packet) -> None:
     # Anonymize MAC addresses in ARP packets
     try:
         anonymize_arp(packet.getlayer(ARP))
+    except AttributeError:
+        pass
+
+    # Anonymize MAC addresses in DHCP packets
+    try:
+        anonymize_dhcp(packet.getlayer(BOOTP))
     except AttributeError:
         pass
 

@@ -4,10 +4,15 @@ Anonymize MAC addresses.
 
 from hashlib import sha256
 from scapy.layers.l2 import Ether, ARP
-from scapy.layers.dhcp import DHCP
+from scapy.layers.dhcp import BOOTP, DHCP
 
 BASE_HEX = 16
 BYTE_ORDER = "big"
+
+# DHCP-related constants
+DHCP_MAGIC_COOKIE = 0x63825363
+DHCP_OPTION_CLIENT_ID = "client_id"
+DHCP_CLIENT_ID_TYPE_ETH = 1
 
 # Special, well-known MAC addresses
 special_macs = [
@@ -137,15 +142,36 @@ def anonymize_arp(arp: ARP) -> ARP:
     return arp
 
 
-def anonymize_dhcp(dhcp: DHCP) -> DHCP:
+def anonymize_dhcp(dhcp: BOOTP) -> BOOTP:
     """
-    Anonymize a packet's DHCP layer.
+    Anonymize a packet's DHCP layer MAC addresses.
     
     Args:
-        dhcp (scapy.DHCP): DHCP layer to anonymize
+        dhcp (scapy.BOOTP): DHCP layer to anonymize
     Returns:
-        scapy.DHCP: anonymized DHCP layer
+        scapy.BOOTP: anonymized DHCP layer
     """
-    # Anonymize client MAC address
-    dhcp.setfieldval("chaddr", anonymize_mac(dhcp.getfieldval("chaddr")))
+    # Anonymize client hardware address
+    chaddr = dhcp.getfieldval("chaddr")[0:6]
+    dhcp.setfieldval("chaddr", anonymize_mac(chaddr))
+
+    # Check if BOOTP layer contains DHCP options
+    options = dhcp.getfieldval("options")
+    cookie = int.from_bytes(options[:4], BYTE_ORDER)
+    if cookie != DHCP_MAGIC_COOKIE:
+        return dhcp
+
+    # BOOTP layer contains DHCP options
+    # Anonymize Client Identifier option
+    dhcp = dhcp.getlayer(DHCP)
+    
+    if dhcp is None or dhcp.options is None:
+        return dhcp
+    
+    for i, (code, value) in enumerate(dhcp.options):
+        if code == DHCP_OPTION_CLIENT_ID and value[0] == DHCP_CLIENT_ID_TYPE_ETH:
+            mac = ":".join(f"{byte:02x}" for byte in value[1:7])
+            dhcp.options[i] = (code, anonymize_mac(mac))
+            break
+
     return dhcp
