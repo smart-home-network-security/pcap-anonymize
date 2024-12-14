@@ -1,5 +1,7 @@
 from scapy.layers.l2 import Ether, ARP
+from scapy.layers.dhcp import BOOTP, DHCP
 from pcap_anonymize.layers.mac import (
+    mac_str_to_bytes, mac_bytes_to_str,
     get_ig_bit, get_ul_bit,
     anonymize_mac,
     anonymize_ether,
@@ -11,11 +13,34 @@ from pcap_anonymize.layers.mac import (
 ### TEST CONSTANTS ###
 
 mac_multicast = "01:00:00:00:00:00"
+mac_multicast_bytes = b"\x01\x00\x00\x00\x00\x00"
 mac_laa = "02:00:00:00:00:00"
+mac_laa_bytes = b"\x02\x00\x00\x00\x00\x00"
 mac_uaa = "00:11:22:33:44:55"
+mac_uaa_bytes = b"\x00\x11\x22\x33\x44\x55"
 
 
 ### TEST FUNCTIONS ###
+
+def test_mac_str_to_bytes() -> None:
+    """
+    Test the function `mac_str_to_bytes`,
+    which converts a MAC address' string representation to bytes.
+    """
+    assert mac_str_to_bytes(mac_multicast) == mac_multicast_bytes
+    assert mac_str_to_bytes(mac_laa) == mac_laa_bytes
+    assert mac_str_to_bytes(mac_uaa) == mac_uaa_bytes
+
+
+def test_mac_bytes_to_str() -> None:
+    """
+    Test the function `mac_bytes_to_str`,
+    which converts a MAC address' bytes representation to a string.
+    """
+    assert mac_bytes_to_str(mac_multicast_bytes) == mac_multicast
+    assert mac_bytes_to_str(mac_laa_bytes) == mac_laa
+    assert mac_bytes_to_str(mac_uaa_bytes) == mac_uaa
+
 
 def test_get_ig_bit() -> None:
     """
@@ -145,3 +170,13 @@ def test_anonymize_arp_uaa() -> None:
     assert arp_uaa.hwsrc[10:] != mac_uaa[10:]
     assert arp_uaa.hwdst.startswith(mac_uaa[:8])
     assert arp_uaa.hwdst[10:] != mac_uaa[10:]
+
+
+# def test_anonymize_dhcp_multicast() -> None:
+#     """
+#     Test the function `anonymize_dhcp`,
+#     with multicast addresses.
+#     """
+#     dhcp = BOOTP(chaddr=mac_multicast)
+#     anonymize_dhcp(dhcp)
+#     assert dhcp.chaddr == mac_multicast

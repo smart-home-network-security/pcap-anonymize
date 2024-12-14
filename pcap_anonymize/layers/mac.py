@@ -21,6 +21,32 @@ special_macs = [
 ]
 
 
+def mac_str_to_bytes(mac: str) -> bytes:
+    """
+    Convert a MAC address string representation
+    to a bytes object.
+
+    Args:
+        mac (str): MAC address to convert
+    Returns:
+        bytes: MAC address as a bytes object
+    """
+    return bytes.fromhex(mac.replace(":", ""))
+
+
+def mac_bytes_to_str(mac: bytes) -> str:
+    """
+    Convert a MAC address bytes object
+    to its string representation.
+
+    Args:
+        mac (bytes): MAC address to convert
+    Returns:
+        str: MAC address as a string
+    """
+    return ":".join(f"{byte:02x}" for byte in mac)
+
+
 def get_ig_bit(mac: str) -> int:
     """
     Get the I/G bit of a given MAC address.
@@ -152,9 +178,8 @@ def anonymize_dhcp(dhcp: BOOTP) -> BOOTP:
         scapy.BOOTP: anonymized DHCP layer
     """
     # Anonymize client hardware address
-    chaddr = dhcp.getfieldval("chaddr")[0:6]
+    chaddr = mac_bytes_to_str(dhcp.getfieldval("chaddr")[0:6])
     dhcp.setfieldval("chaddr", anonymize_mac(chaddr))
-    dhcp.show()
 
     # Check if BOOTP layer contains DHCP options
     options = dhcp.getfieldval("options")
