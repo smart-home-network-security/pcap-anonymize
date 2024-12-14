@@ -44,20 +44,32 @@ def test_mac_bytes_to_str() -> None:
 
 def test_get_ig_bit() -> None:
     """
-    Test the function `get_ig_bit`.
+    Test the function `get_ig_bit`,
+    both with string and bytes representations of MAC addresses.
     """
-    assert get_ig_bit("00:00:00:00:00:00") == 0b00000000
-    assert get_ig_bit("01:00:00:00:00:00") == 0b00000001
-    assert get_ig_bit("12:34:56:78:9a:bc") == 0b00000000
+    # String representation
+    assert get_ig_bit(mac_multicast) == 0b00000001
+    assert get_ig_bit(mac_laa) == 0b00000000
+    assert get_ig_bit(mac_uaa) == 0b00000000
+    # Bytes representation
+    assert get_ig_bit(mac_multicast_bytes) == 0b00000001
+    assert get_ig_bit(mac_laa_bytes) == 0b00000000
+    assert get_ig_bit(mac_uaa_bytes) == 0b00000000
 
 
 def test_get_ul_bit() -> None:
     """
-    Test the function `get_ul_bit`.
+    Test the function `get_ul_bit`,
+    both with string and bytes representations of MAC addresses.
     """
-    assert get_ul_bit("00:00:00:00:00:00") == 0b00000000
-    assert get_ul_bit("02:00:00:00:00:00") == 0b00000010
-    assert get_ul_bit("12:34:56:78:9a:bc") == 0b00000010
+    # String representation
+    assert get_ul_bit(mac_multicast) == 0b00000000
+    assert get_ul_bit(mac_laa) == 0b00000010
+    assert get_ul_bit(mac_uaa) == 0b00000000
+    # Bytes representation
+    assert get_ul_bit(mac_multicast_bytes) == 0b00000000
+    assert get_ul_bit(mac_laa_bytes) == 0b00000010
+    assert get_ul_bit(mac_uaa_bytes) == 0b00000000
 
 
 def test_anonymize_mac_multicast() -> None:
@@ -67,6 +79,7 @@ def test_anonymize_mac_multicast() -> None:
     The MAC address should not be anonymized.
     """
     assert anonymize_mac(mac_multicast) == mac_multicast
+    assert anonymize_mac(mac_multicast_bytes) == mac_multicast_bytes
 
 
 def test_anonymize_mac_laa() -> None:
@@ -77,9 +90,13 @@ def test_anonymize_mac_laa() -> None:
     """
     mac_laa_anon = anonymize_mac(mac_laa)
     assert mac_laa_anon != mac_laa
-    # Verify I/G and U/L bits
     assert get_ig_bit(mac_laa) == get_ig_bit(mac_laa_anon)
     assert get_ul_bit(mac_laa) == get_ul_bit(mac_laa_anon)
+
+    mac_laa_bytes_anon = mac_str_to_bytes(anonymize_mac(mac_laa_bytes))
+    assert mac_laa_bytes_anon != mac_laa_bytes
+    assert get_ig_bit(mac_laa_bytes) == get_ig_bit(mac_laa_bytes_anon)
+    assert get_ul_bit(mac_laa_bytes) == get_ul_bit(mac_laa_bytes_anon)
 
 
 def test_anonymize_mac_uaa() -> None:
@@ -92,6 +109,10 @@ def test_anonymize_mac_uaa() -> None:
     mac_uaa_anon = anonymize_mac(mac_uaa)
     assert mac_uaa_anon.startswith(mac_uaa[:8])  # Vendor's OUI is kept
     assert mac_uaa_anon[10:] != mac_uaa[10:]     # Last 3 bytes are anonymized
+
+    mac_uaa_bytes_anon = mac_str_to_bytes(anonymize_mac(mac_uaa_bytes))
+    assert mac_uaa_bytes_anon[:3] == mac_uaa_bytes[:3]  # Vendor's OUI is kept
+    assert mac_uaa_bytes_anon[3:] != mac_uaa_bytes[3:]  # Last 3 bytes are anonymized
 
 
 def test_anonymize_ether_multicast() -> None:
@@ -177,6 +198,26 @@ def test_anonymize_arp_uaa() -> None:
 #     Test the function `anonymize_dhcp`,
 #     with multicast addresses.
 #     """
-#     dhcp = BOOTP(chaddr=mac_multicast)
+#     dhcp = BOOTP(chaddr=mac_str_to_bytes(mac_multicast))
 #     anonymize_dhcp(dhcp)
-#     assert dhcp.chaddr == mac_multicast
+#     assert dhcp.chaddr == mac_multicast_bytes
+
+
+# def test_anonymize_dhcp_laa() -> None:
+#     """
+#     Test the function `anonymize_dhcp`,
+#     with locally administered addresses.
+#     """
+#     dhcp = BOOTP(chaddr=mac_str_to_bytes(mac_multicast))
+#     anonymize_dhcp(dhcp)
+#     assert get_ig_bit(dhcp.chaddr) == get_ig_bit(mac_multicast_bytes)
+
+
+# def test_anonymize_dhcp_multicast() -> None:
+#     """
+#     Test the function `anonymize_dhcp`,
+#     with multicast addresses.
+#     """
+#     dhcp = BOOTP(chaddr=mac_str_to_bytes(mac_multicast))
+#     anonymize_dhcp(dhcp)
+#     assert dhcp.chaddr == mac_multicast_bytes
