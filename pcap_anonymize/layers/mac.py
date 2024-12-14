@@ -222,7 +222,12 @@ def anonymize_dhcp(dhcp: BOOTP) -> BOOTP:
     if dhcp is None or dhcp.options is None:
         return dhcp
     
-    for i, (code, value) in enumerate(dhcp.options):
+    for i, option in enumerate(dhcp.options):
+        # Option is not of format (code, value), skip
+        if len(option) != 2:
+            continue
+
+        code, value = option
         if code == DHCP_OPTION_CLIENT_ID and value[0] == DHCP_CLIENT_ID_TYPE_ETH:
             mac_anon = mac_str_to_bytes(anonymize_mac(value[1:7]))
             dhcp.options[i] = (code, value[0].to_bytes(1, BYTE_ORDER) + mac_anon)
