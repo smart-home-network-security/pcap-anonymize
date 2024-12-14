@@ -125,7 +125,10 @@ def anonymize_mac(mac: str) -> str:
     # Multicast address:
     # do not anonymize
     if is_multicast:
-        return mac
+        if isinstance(mac, bytes):
+            return mac_bytes_to_str(mac)
+        elif isinstance(mac, str):
+            return mac
 
     ## U/L bit: first byte, second least-significant bit
     # U/L bit = 0 ==> Universally administered address (UAA)
@@ -221,8 +224,8 @@ def anonymize_dhcp(dhcp: BOOTP) -> BOOTP:
     
     for i, (code, value) in enumerate(dhcp.options):
         if code == DHCP_OPTION_CLIENT_ID and value[0] == DHCP_CLIENT_ID_TYPE_ETH:
-            mac = ":".join(f"{byte:02x}" for byte in value[1:7])
-            dhcp.options[i] = (code, anonymize_mac(mac))
+            mac_anon = mac_str_to_bytes(anonymize_mac(value[1:7]))
+            dhcp.options[i] = (code, value[0].to_bytes(1, BYTE_ORDER) + mac_anon)
             break
 
     return dhcp

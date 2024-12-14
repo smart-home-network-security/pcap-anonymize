@@ -79,7 +79,7 @@ def test_anonymize_mac_multicast() -> None:
     The MAC address should not be anonymized.
     """
     assert anonymize_mac(mac_multicast) == mac_multicast
-    assert anonymize_mac(mac_multicast_bytes) == mac_multicast_bytes
+    assert mac_str_to_bytes(anonymize_mac(mac_multicast_bytes)) == mac_multicast_bytes
 
 
 def test_anonymize_mac_laa() -> None:
@@ -193,31 +193,57 @@ def test_anonymize_arp_uaa() -> None:
     assert arp_uaa.hwdst[10:] != mac_uaa[10:]
 
 
-# def test_anonymize_dhcp_multicast() -> None:
-#     """
-#     Test the function `anonymize_dhcp`,
-#     with multicast addresses.
-#     """
-#     dhcp = BOOTP(chaddr=mac_str_to_bytes(mac_multicast))
-#     anonymize_dhcp(dhcp)
-#     assert dhcp.chaddr == mac_multicast_bytes
+def test_anonymize_dhcp_multicast() -> None:
+    """
+    Test the function `anonymize_dhcp`,
+    with multicast addresses.
+    """
+    # Client hardware address
+    dhcp = BOOTP(chaddr=mac_str_to_bytes(mac_multicast))
+    anonymize_dhcp(dhcp)
+    assert dhcp.chaddr == mac_multicast_bytes
+
+    # Option: Client Identifier
+    dhcp /= DHCP(options=[("client_id", b"\x01" + mac_str_to_bytes(mac_multicast))])
+    anonymize_dhcp(dhcp)
+    assert dhcp.getlayer(DHCP).options[0][1][1:7] == mac_multicast_bytes
 
 
-# def test_anonymize_dhcp_laa() -> None:
-#     """
-#     Test the function `anonymize_dhcp`,
-#     with locally administered addresses.
-#     """
-#     dhcp = BOOTP(chaddr=mac_str_to_bytes(mac_multicast))
-#     anonymize_dhcp(dhcp)
-#     assert get_ig_bit(dhcp.chaddr) == get_ig_bit(mac_multicast_bytes)
+def test_anonymize_dhcp_laa() -> None:
+    """
+    Test the function `anonymize_dhcp`,
+    with locally administered addresses.
+    """
+    # Client hardware address
+    dhcp = BOOTP(chaddr=mac_str_to_bytes(mac_laa))
+    anonymize_dhcp(dhcp)
+    assert dhcp.chaddr != mac_laa_bytes
+    assert get_ig_bit(dhcp.chaddr) == get_ig_bit(mac_laa_bytes)
+    assert get_ul_bit(dhcp.chaddr) == get_ul_bit(mac_laa_bytes)
+
+    # Option: Client Identifier
+    dhcp /= DHCP(options=[("client_id", b"\x01" + mac_str_to_bytes(mac_laa))])
+    anonymize_dhcp(dhcp)
+    mac_anon = dhcp.getlayer(DHCP).options[0][1][1:7]
+    assert mac_anon != mac_laa_bytes
+    assert get_ig_bit(mac_anon) == get_ig_bit(mac_laa_bytes)
+    assert get_ul_bit(mac_anon) == get_ul_bit(mac_laa_bytes)
 
 
-# def test_anonymize_dhcp_multicast() -> None:
-#     """
-#     Test the function `anonymize_dhcp`,
-#     with multicast addresses.
-#     """
-#     dhcp = BOOTP(chaddr=mac_str_to_bytes(mac_multicast))
-#     anonymize_dhcp(dhcp)
-#     assert dhcp.chaddr == mac_multicast_bytes
+def test_anonymize_dhcp_uaa() -> None:
+    """
+    Test the function `anonymize_dhcp`,
+    with universally administered addresses.
+    """
+    # Client hardware address
+    dhcp = BOOTP(chaddr=mac_str_to_bytes(mac_uaa))
+    anonymize_dhcp(dhcp)
+    assert dhcp.chaddr[:3] == mac_uaa_bytes[:3]
+    assert dhcp.chaddr[3:] != mac_uaa_bytes[3:]
+
+    # Option: Client Identifier
+    dhcp /= DHCP(options=[("client_id", b"\x01" + mac_str_to_bytes(mac_uaa))])
+    anonymize_dhcp(dhcp)
+    mac_anon = dhcp.getlayer(DHCP).options[0][1][1:7]
+    assert mac_anon[:3] == mac_uaa_bytes[:3]
+    assert mac_anon[3:] != mac_uaa_bytes[3:]
