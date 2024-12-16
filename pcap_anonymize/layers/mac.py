@@ -234,3 +234,29 @@ def anonymize_dhcp(dhcp: BOOTP) -> BOOTP:
             break
 
     return dhcp
+
+
+def anonymize_pkt_macs(packet) -> None:
+    """
+    Anonymize a packet's MAC addresses.
+    
+    Args:
+        packet: scapy packet to anonymize
+    """
+    # Ethernet
+    try:
+        anonymize_ether(packet.getlayer(Ether))
+    except AttributeError:
+        pass
+
+    # ARP
+    try:
+        anonymize_arp(packet.getlayer(ARP))
+    except:
+        pass
+    
+    # DHCP
+    try:
+        anonymize_dhcp(packet.getlayer(BOOTP))
+    except AttributeError:
+        pass

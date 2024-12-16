@@ -5,10 +5,8 @@ Anonymize all packets in a PCAP file.
 import os
 from pathlib import Path
 from scapy.all import Packet, sniff, wrpcap
-from scapy.layers.l2 import Ether, ARP
-from scapy.layers.dhcp import BOOTP
 # Packet layers
-from .layers.mac import anonymize_ether, anonymize_arp, anonymize_dhcp
+from .layers.mac import anonymize_pkt_macs
 
 
 ### GLOBAL VARIABLES ###
@@ -49,22 +47,10 @@ def anonymize_packet(packet: Packet) -> None:
     global packets
 
     # Anonymize MAC addresses
-    try:
-        anonymize_ether(packet.getlayer(Ether))
-    except AttributeError:
-        pass
-    
-    # Anonymize MAC addresses in ARP packets
-    try:
-        anonymize_arp(packet.getlayer(ARP))
-    except AttributeError:
-        pass
+    anonymize_pkt_macs(packet)
 
-    # Anonymize MAC addresses in DHCP packets
-    try:
-        anonymize_dhcp(packet.getlayer(BOOTP))
-    except AttributeError:
-        pass
+    # Anonymize application layer
+    # TODO
 
     # Recompute packet checksums
     packet = recompute_checksums(packet)

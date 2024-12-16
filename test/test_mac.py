@@ -6,7 +6,8 @@ from pcap_anonymize.layers.mac import (
     anonymize_mac,
     anonymize_ether,
     anonymize_arp,
-    anonymize_dhcp
+    anonymize_dhcp,
+    anonymize_pkt_macs
 )
 
 
@@ -125,6 +126,10 @@ def test_anonymize_ether_multicast() -> None:
     assert ether_multicast.src == mac_multicast
     assert ether_multicast.dst == mac_multicast
 
+    anonymize_pkt_macs(ether_multicast)
+    assert ether_multicast.src == mac_multicast
+    assert ether_multicast.dst == mac_multicast
+
 
 def test_anonymize_ether_laa() -> None:
     """
@@ -133,6 +138,14 @@ def test_anonymize_ether_laa() -> None:
     """
     ether_laa = Ether(src=mac_laa, dst=mac_laa)
     anonymize_ether(ether_laa)
+    assert ether_laa.src != mac_laa
+    assert get_ig_bit(ether_laa.src) == get_ig_bit(mac_laa)
+    assert get_ul_bit(ether_laa.src) == get_ul_bit(mac_laa)
+    assert ether_laa.dst != mac_laa
+    assert get_ig_bit(ether_laa.dst) == get_ig_bit(mac_laa)
+    assert get_ul_bit(ether_laa.dst) == get_ul_bit(mac_laa)
+
+    anonymize_pkt_macs(ether_laa)
     assert ether_laa.src != mac_laa
     assert get_ig_bit(ether_laa.src) == get_ig_bit(mac_laa)
     assert get_ul_bit(ether_laa.src) == get_ul_bit(mac_laa)
@@ -153,6 +166,12 @@ def test_anonymize_ether_uaa() -> None:
     assert ether_laa.dst.startswith(mac_uaa[:8])
     assert ether_laa.dst[10:] != mac_uaa[10:]
 
+    anonymize_pkt_macs(ether_laa)
+    assert ether_laa.src.startswith(mac_uaa[:8])
+    assert ether_laa.src[10:] != mac_uaa[10:]
+    assert ether_laa.dst.startswith(mac_uaa[:8])
+    assert ether_laa.dst[10:] != mac_uaa[10:]
+
 
 def test_anonymize_arp_multicast() -> None:
     """
@@ -164,6 +183,10 @@ def test_anonymize_arp_multicast() -> None:
     assert arp_multicast.hwsrc == mac_multicast
     assert arp_multicast.hwdst == mac_multicast
 
+    anonymize_pkt_macs(arp_multicast)
+    assert arp_multicast.hwsrc == mac_multicast
+    assert arp_multicast.hwdst == mac_multicast
+
 
 def test_anonymize_arp_laa() -> None:
     """
@@ -172,6 +195,14 @@ def test_anonymize_arp_laa() -> None:
     """
     arp_laa = ARP(hwsrc=mac_laa, hwdst=mac_laa)
     anonymize_arp(arp_laa)
+    assert arp_laa.hwsrc != mac_laa
+    assert get_ig_bit(arp_laa.hwsrc) == get_ig_bit(mac_laa)
+    assert get_ul_bit(arp_laa.hwsrc) == get_ul_bit(mac_laa)
+    assert arp_laa.hwdst != mac_laa
+    assert get_ig_bit(arp_laa.hwdst) == get_ig_bit(mac_laa)
+    assert get_ul_bit(arp_laa.hwdst) == get_ul_bit(mac_laa)
+
+    anonymize_pkt_macs(arp_laa)
     assert arp_laa.hwsrc != mac_laa
     assert get_ig_bit(arp_laa.hwsrc) == get_ig_bit(mac_laa)
     assert get_ul_bit(arp_laa.hwsrc) == get_ul_bit(mac_laa)
@@ -192,6 +223,12 @@ def test_anonymize_arp_uaa() -> None:
     assert arp_uaa.hwdst.startswith(mac_uaa[:8])
     assert arp_uaa.hwdst[10:] != mac_uaa[10:]
 
+    anonymize_pkt_macs(arp_uaa)
+    assert arp_uaa.hwsrc.startswith(mac_uaa[:8])
+    assert arp_uaa.hwsrc[10:] != mac_uaa[10:]
+    assert arp_uaa.hwdst.startswith(mac_uaa[:8])
+    assert arp_uaa.hwdst[10:] != mac_uaa[10:]
+
 
 def test_anonymize_dhcp_multicast() -> None:
     """
@@ -202,10 +239,14 @@ def test_anonymize_dhcp_multicast() -> None:
     dhcp = BOOTP(chaddr=mac_str_to_bytes(mac_multicast))
     anonymize_dhcp(dhcp)
     assert dhcp.chaddr == mac_multicast_bytes
+    anonymize_pkt_macs(dhcp)
+    assert dhcp.chaddr == mac_multicast_bytes
 
     # Option: Client Identifier
     dhcp /= DHCP(options=[("client_id", b"\x01" + mac_str_to_bytes(mac_multicast))])
     anonymize_dhcp(dhcp)
+    assert dhcp.getlayer(DHCP).options[0][1][1:7] == mac_multicast_bytes
+    anonymize_pkt_macs(dhcp)
     assert dhcp.getlayer(DHCP).options[0][1][1:7] == mac_multicast_bytes
 
 
@@ -221,9 +262,21 @@ def test_anonymize_dhcp_laa() -> None:
     assert get_ig_bit(dhcp.chaddr) == get_ig_bit(mac_laa_bytes)
     assert get_ul_bit(dhcp.chaddr) == get_ul_bit(mac_laa_bytes)
 
+    anonymize_pkt_macs(dhcp)
+    assert dhcp.chaddr != mac_laa_bytes
+    assert get_ig_bit(dhcp.chaddr) == get_ig_bit(mac_laa_bytes)
+    assert get_ul_bit(dhcp.chaddr) == get_ul_bit(mac_laa_bytes)
+
+
     # Option: Client Identifier
     dhcp /= DHCP(options=[("client_id", b"\x01" + mac_str_to_bytes(mac_laa))])
     anonymize_dhcp(dhcp)
+    mac_anon = dhcp.getlayer(DHCP).options[0][1][1:7]
+    assert mac_anon != mac_laa_bytes
+    assert get_ig_bit(mac_anon) == get_ig_bit(mac_laa_bytes)
+    assert get_ul_bit(mac_anon) == get_ul_bit(mac_laa_bytes)
+
+    anonymize_pkt_macs(dhcp)
     mac_anon = dhcp.getlayer(DHCP).options[0][1][1:7]
     assert mac_anon != mac_laa_bytes
     assert get_ig_bit(mac_anon) == get_ig_bit(mac_laa_bytes)
@@ -241,9 +294,19 @@ def test_anonymize_dhcp_uaa() -> None:
     assert dhcp.chaddr[:3] == mac_uaa_bytes[:3]
     assert dhcp.chaddr[3:] != mac_uaa_bytes[3:]
 
+    anonymize_pkt_macs(dhcp)
+    assert dhcp.chaddr[:3] == mac_uaa_bytes[:3]
+    assert dhcp.chaddr[3:] != mac_uaa_bytes[3:]
+
+
     # Option: Client Identifier
     dhcp /= DHCP(options=[("client_id", b"\x01" + mac_str_to_bytes(mac_uaa))])
     anonymize_dhcp(dhcp)
+    mac_anon = dhcp.getlayer(DHCP).options[0][1][1:7]
+    assert mac_anon[:3] == mac_uaa_bytes[:3]
+    assert mac_anon[3:] != mac_uaa_bytes[3:]
+
+    anonymize_pkt_macs(dhcp)
     mac_anon = dhcp.getlayer(DHCP).options[0][1][1:7]
     assert mac_anon[:3] == mac_uaa_bytes[:3]
     assert mac_anon[3:] != mac_uaa_bytes[3:]
