@@ -1,0 +1,72 @@
+"""
+Anonymize HTTP packets.
+"""
+
+from enum import Enum
+from scapy.all import Packet, Raw
+from scapy.layers.http import HTTP, HTTPRequest, HTTPResponse
+
+
+ENCODING = "utf-8"
+
+class HttpFields(Enum):
+    """
+    HTTP fields.
+    """
+    METHOD = "Method"
+    PATH   = "Path"
+
+
+def get_http_layer(packet: Packet) -> HTTP:
+    """
+    Get the HTTP layer from a packet.
+
+    Args:
+        packet (scapy.Packet): packet to get the HTTP layer from
+    Returns:
+        (scapy.HTTP): HTTP layer
+    Raises:
+        AttributeError: if the HTTP layer could not be found in the packet
+    """
+    ## Get HTTP layer directly
+    # HTTP Request
+    http = packet.getlayer(HTTPRequest)
+    if http is not None:
+        return http
+    # HTTP Response
+    http = packet.getlayer(HTTPResponse)
+    if http is not None:
+        return http
+    
+    # HTTP layer could not be retrieved directly.
+    # Try to get it from the Raw layer.
+    raw_load = packet.getlayer(Raw).getfieldval("load")
+    http = HTTPRequest(raw_load)
+    if http.haslayer(HTTPRequest):
+        return http
+    http = HTTPResponse(raw_load)
+    if http.haslayer(HTTPResponse):
+        return http
+    
+    raise AttributeError(f"HTTP layer not found in packet {packet.summary()}")
+
+
+def anonymize_http(http: HTTP) -> None:
+    """
+    Anonymize a packet's HTTP layer.
+
+    Args:
+        http (scapy.HTTP): HTTP layer to anonymize
+    """
+    # Remove request parameters
+    try:
+        path = http.getfieldval(HttpFields.PATH.value).decode(ENCODING)
+        http.setfieldval(HttpFields.PATH.value, path.split("?")[0].encode(ENCODING))
+    except AttributeError:
+        # HTTP packet does not contain the `Path` field
+        pass
+
+    # Remove all fields other than Method and Path
+    for field in http.fields.copy():
+        if field != HttpFields.METHOD.value and field != HttpFields.PATH.value:
+            delattr(http, field)
