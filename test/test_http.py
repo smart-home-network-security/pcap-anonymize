@@ -1,5 +1,5 @@
 from scapy.layers.inet import TCP
-from scapy.layers.http import HTTP, HTTPRequest, HTTPResponse
+from scapy.layers.http import HTTPRequest, HTTPResponse
 from pcap_anonymize.layers.http import (
     HttpFields,
     get_http_layer,
