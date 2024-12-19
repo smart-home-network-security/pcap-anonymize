@@ -52,3 +52,7 @@ dependencies = [
 [project.urls]
 "Homepage" = "https://forge.uclouvain.be/smart-home-network-security/pcap-anonymize"
 "Source" = "https://forge.uclouvain.be/smart-home-network-security/pcap-anonymize"
+
+[project.scripts]
+pcap-anonymize = "pcap_anonymize:__main__.main"
+pcap_anonymize = "pcap_anonymize:__main__.main"
