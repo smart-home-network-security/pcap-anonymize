@@ -6,13 +6,13 @@ import os
 from pathlib import Path
 from scapy.all import Packet, sniff, wrpcap
 # Packet layers
-from .layers.mac import anonymize_pkt_macs
+from .mac import anonymize_pkt_macs
+from .app_layer import anonymize_app_layer
 
 
 ### GLOBAL VARIABLES ###
 
 packets = []
-
 
 
 ### FUNCTIONS ###
@@ -50,7 +50,7 @@ def anonymize_packet(packet: Packet) -> None:
     anonymize_pkt_macs(packet)
 
     # Anonymize application layer
-    # TODO
+    anonymize_app_layer(packet)
 
     # Recompute packet checksums
     packet = recompute_checksums(packet)

@@ -1,6 +1,6 @@
 from scapy.packet import Raw
 from scapy.layers.inet import TCP
-from pcap_anonymize.layers.tplink import anonymize_tplink
+from pcap_anonymize.app_layer.tplink import anonymize_tplink
 
 
 ### TEST FUNCTIONS ###

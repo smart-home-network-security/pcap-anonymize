@@ -1,18 +1,12 @@
 """
-Anonymize MAC addresses.
+Util functions for MAC address manipulation.
 """
 
 from hashlib import sha256
-from scapy.layers.l2 import Ether, ARP
-from scapy.layers.dhcp import BOOTP, DHCP
+
 
 BASE_HEX = 16
 BYTE_ORDER = "big"
-
-# DHCP-related constants
-DHCP_MAGIC_COOKIE = 0x63825363
-DHCP_OPTION_CLIENT_ID = "client_id"
-DHCP_CLIENT_ID_TYPE_ETH = 1
 
 # Special, well-known MAC addresses
 special_macs = [
@@ -49,7 +43,7 @@ def mac_bytes_to_str(mac: bytes) -> str:
     return ":".join(f"{byte:02x}" for byte in mac)
 
 
-def _get_first_byte(mac: str | bytes) -> int:
+def get_first_byte(mac: str | bytes) -> int:
     """
     Get the first byte of a MAC address.
 
@@ -82,7 +76,7 @@ def get_ig_bit(mac: str | bytes) -> int:
         TypeError: if the MAC address is of an unsupported type
     """
     ig_mask = 0b00000001
-    return _get_first_byte(mac) & ig_mask
+    return get_first_byte(mac) & ig_mask
 
 
 def get_ul_bit(mac: str | bytes) -> int:
@@ -98,7 +92,7 @@ def get_ul_bit(mac: str | bytes) -> int:
         TypeError: if the MAC address is of an unsupported type
     """
     ul_mask = 0b00000010
-    return _get_first_byte(mac) & ul_mask
+    return get_first_byte(mac) & ul_mask
 
 
 def anonymize_mac(mac: str) -> str:
@@ -166,97 +160,3 @@ def anonymize_mac(mac: str) -> str:
         ':' +
         ':'.join(f"{digest[i]:02x}" for i in range(0, 3))  # Hashed last 3 bytes
     )
-    
-
-def anonymize_ether(ether: Ether) -> Ether:
-    """
-    Anonymize a packet's Ether layer.
-    
-    Args:
-        ether (scapy.Ether): Ether layer to anonymize
-    Returns:
-        scapy.Ether: anonymized Ether layer
-    """
-    ether.setfieldval("src", anonymize_mac(ether.getfieldval("src")))
-    ether.setfieldval("dst", anonymize_mac(ether.getfieldval("dst")))
-    return ether
-    
-
-def anonymize_arp(arp: ARP) -> ARP:
-    """
-    Anonymize a packet's ARP layer.
-    
-    Args:
-        packet (scapy.ARP): ARP layer to anonymize
-    Returns:
-        scapy.ARP: anonymized ARP layer
-    """
-    arp.setfieldval("hwsrc", anonymize_mac(arp.getfieldval("hwsrc")))
-    arp.setfieldval("hwdst", anonymize_mac(arp.getfieldval("hwdst")))
-    return arp
-
-
-def anonymize_dhcp(dhcp: BOOTP) -> BOOTP:
-    """
-    Anonymize a packet's DHCP layer MAC addresses.
-    
-    Args:
-        dhcp (scapy.BOOTP): DHCP layer to anonymize
-    Returns:
-        scapy.BOOTP: anonymized DHCP layer
-    """
-    # Anonymize client hardware address
-    chaddr = mac_bytes_to_str(dhcp.getfieldval("chaddr")[0:6])
-    dhcp.setfieldval("chaddr", mac_str_to_bytes(anonymize_mac(chaddr)))
-
-    # Check if BOOTP layer contains DHCP options
-    options = dhcp.getfieldval("options")
-    cookie = int.from_bytes(options[:4], BYTE_ORDER)
-    if cookie != DHCP_MAGIC_COOKIE:
-        return dhcp
-
-    # BOOTP layer contains DHCP options
-    # Anonymize Client Identifier option
-    dhcp = dhcp.getlayer(DHCP)
-    
-    if dhcp is None or dhcp.options is None:
-        return dhcp
-    
-    for i, option in enumerate(dhcp.options):
-        # Option is not of format (code, value), skip
-        if len(option) != 2:
-            continue
-
-        code, value = option
-        if code == DHCP_OPTION_CLIENT_ID and value[0] == DHCP_CLIENT_ID_TYPE_ETH:
-            mac_anon = mac_str_to_bytes(anonymize_mac(value[1:7]))
-            dhcp.options[i] = (code, value[0].to_bytes(1, BYTE_ORDER) + mac_anon)
-            break
-
-    return dhcp
-
-
-def anonymize_pkt_macs(packet) -> None:
-    """
-    Anonymize a packet's MAC addresses.
-    
-    Args:
-        packet: scapy packet to anonymize
-    """
-    # Ethernet
-    try:
-        anonymize_ether(packet.getlayer(Ether))
-    except AttributeError:
-        pass
-
-    # ARP
-    try:
-        anonymize_arp(packet.getlayer(ARP))
-    except:
-        pass
-    
-    # DHCP
-    try:
-        anonymize_dhcp(packet.getlayer(BOOTP))
-    except AttributeError:
-        pass

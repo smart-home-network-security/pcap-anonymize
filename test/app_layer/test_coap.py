@@ -1,5 +1,5 @@
 from scapy.contrib.coap import CoAP
-from pcap_anonymize.layers.coap import CoapFields, anonymize_coap
+from pcap_anonymize.app_layer.coap import CoapFields, anonymize_coap
 
 
 ### TEST FUNCTIONS ###

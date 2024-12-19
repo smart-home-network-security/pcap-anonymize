@@ -1,3 +1,0 @@
-"""
-Submodule `layers`.
-"""
