@@ -3,6 +3,7 @@ Anonymize all packets in a PCAP file.
 """
 
 import os
+import glob
 from pathlib import Path
 from scapy.all import Packet, sniff, wrpcap
 # Packet layers
@@ -69,13 +70,34 @@ def anonymize_pcap(input: os.PathLike, output: os.PathLike = None) -> None:
     Args:
         input: path to the input PCAP file
         output: path to the output PCAP file.
-                If None, create a new file having the same name as the input file with the suffix '.anonymized.pcap'.
+                If None, create a new file having the same name as the input file with the suffix '.anon.pcap'.
     """
+    global packets
+
     if output is None:
-        output = str(Path(input).with_suffix('.anonymized.pcap'))
+        output = str(Path(input).with_suffix(".anon.pcap"))
 
     # Read and anonymize packets from the input file
     sniff(offline=input, prn=anonymize_packet, store=False)
 
     # Write anonymized packets to the output file
     wrpcap(output, packets)
+
+    # Reset global packets list
+    packets = []
+
+
+def anonymize_pcaps_in_dir(dir: os.PathLike) -> None:
+    """
+    Anonymize all PCAP files in a directory.
+
+    Args:
+        dir: path to the directory containing the PCAP files
+    """
+    for pcap_file in glob.glob(os.path.join(dir, "*.pcap")):
+
+        # Skip traces already anonymized
+        if pcap_file.endswith(".anon.pcap"):
+            continue
+
+        anonymize_pcap(pcap_file, None)
