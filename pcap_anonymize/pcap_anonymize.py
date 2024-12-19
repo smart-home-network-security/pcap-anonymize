@@ -17,21 +17,25 @@ packets = []
 
 ### FUNCTIONS ###
 
-def recompute_checksums(packet: Packet) -> Packet:
+def rebuild_packet(packet: Packet) -> Packet:
     """
-    Recompute a given packet's checksums.
+    Rebuild a packet:
+    recompute its lengths and checksums.
 
     Args:
-        packet (scapy.Packet): scapy packet to recompute checksums for
+        packet (scapy.Packet): scapy packet to rebuild
     Returns:
-        (scapy.Packet): packet with recomputed checksums
+        scapy.Packet: rebuilt packet
     """
+    fields_to_delete = ["len", "chksum"]
+
     for layer_class in packet.layers():
         layer = packet.getlayer(layer_class)
-        try:
-            delattr(layer, "chksum")
-        except AttributeError:
-            pass
+        for field in fields_to_delete:
+            try:
+                delattr(layer, field)
+            except AttributeError:
+                pass
         
     return packet.__class__(bytes(packet))
 
@@ -53,7 +57,7 @@ def anonymize_packet(packet: Packet) -> None:
     anonymize_app_layer(packet)
 
     # Recompute packet checksums
-    packet = recompute_checksums(packet)
+    packet = rebuild_packet(packet)
 
     packets.append(packet)
 

@@ -40,14 +40,22 @@ def get_http_layer(packet: Packet) -> HTTP:
     
     # HTTP layer could not be retrieved directly.
     # Try to get it from the Raw layer.
-    raw_load = packet.getlayer(Raw).getfieldval("load")
-    http = HTTPRequest(raw_load)
-    if http.haslayer(HTTPRequest):
-        return http
-    http = HTTPResponse(raw_load)
-    if http.haslayer(HTTPResponse):
-        return http
     
+    raw_load = packet.getlayer(Raw).getfieldval("load")
+    try:
+        http = HTTPRequest(raw_load)
+        if http.haslayer(HTTPRequest):
+            return http
+    except ValueError:
+        pass
+
+    try:
+        http = HTTPResponse(raw_load)
+        if http.haslayer(HTTPResponse):
+            return http
+    except ValueError:
+        pass
+ 
     raise AttributeError(f"HTTP layer not found in packet {packet.summary()}")
 
 

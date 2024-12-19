@@ -17,5 +17,6 @@ def test_anonymize_tplink() -> None:
     anonymize_tplink(packet)
 
     # Check if payload was correctly deleted
+    assert packet.haslayer(TCP)
     assert not packet.haslayer(Raw)
     assert not hasattr(packet, "load")
