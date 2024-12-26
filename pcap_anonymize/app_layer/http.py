@@ -70,17 +70,18 @@ def anonymize_http(http: HTTP) -> None:
         http (scapy.HTTP): HTTP layer to anonymize
     """
     # Remove request parameters
-    try:
-        path = http.getfieldval(HttpFields.PATH.value).decode(ENCODING)
-        http.setfieldval(HttpFields.PATH.value, path.split("?")[0].encode(ENCODING))
-    except AttributeError:
-        # HTTP packet does not contain the `Path` field
-        logger.warning(f"Field {HttpFields.PATH.value} not found in HTTP layer {http.summary()}")
-        pass
-    except UnicodeDecodeError:
-        # `Path` field is not encoded in UTF-8
-        logger.warning(f"Field {HttpFields.PATH.value} not UTF-8 encoded in HTTP layer {http.summary()}")
-        pass
+    if http.haslayer(HTTPRequest):
+        try:
+            path = http.getfieldval(HttpFields.PATH.value).decode(ENCODING)
+            http.setfieldval(HttpFields.PATH.value, path.split("?")[0].encode(ENCODING))
+        except AttributeError:
+            # HTTP packet does not contain the `Path` field
+            logger.warning(f"Field {HttpFields.PATH.value} not found in HTTP layer {http.summary()}")
+            pass
+        except UnicodeDecodeError:
+            # `Path` field is not encoded in UTF-8
+            logger.warning(f"Field {HttpFields.PATH.value} not UTF-8 encoded in HTTP layer {http.summary()}")
+            pass
 
     # Remove all fields other than Method and Path
     for field in http.fields.copy():
