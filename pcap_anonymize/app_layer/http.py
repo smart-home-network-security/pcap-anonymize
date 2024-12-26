@@ -3,11 +3,14 @@ Anonymize HTTP packets.
 """
 
 from enum import Enum
+import logging
 from scapy.all import Packet, Raw
 from scapy.layers.http import HTTP, HTTPRequest, HTTPResponse
 
 
 ENCODING = "utf-8"
+logger = logging.getLogger("pcap_anonymize")
+
 
 class HttpFields(Enum):
     """
@@ -72,6 +75,11 @@ def anonymize_http(http: HTTP) -> None:
         http.setfieldval(HttpFields.PATH.value, path.split("?")[0].encode(ENCODING))
     except AttributeError:
         # HTTP packet does not contain the `Path` field
+        logger.warning(f"Field {HttpFields.PATH.value} not found in HTTP layer {http.summary()}")
+        pass
+    except UnicodeDecodeError:
+        # `Path` field is not encoded in UTF-8
+        logger.warning(f"Field {HttpFields.PATH.value} not UTF-8 encoded in HTTP layer {http.summary()}")
         pass
 
     # Remove all fields other than Method and Path

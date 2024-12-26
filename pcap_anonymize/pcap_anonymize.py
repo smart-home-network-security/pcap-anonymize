@@ -5,6 +5,7 @@ Anonymize all packets in a PCAP file.
 import os
 import glob
 from pathlib import Path
+import logging
 from scapy.all import Packet, sniff, wrpcap
 # Packet layers
 from .mac import anonymize_pkt_macs
@@ -13,7 +14,11 @@ from .app_layer import anonymize_app_layer
 
 ### GLOBAL VARIABLES ###
 
+i = 1
 packets = []
+
+# Logging configuration
+logger = logging.getLogger("pcap_anonymize")
 
 
 ### FUNCTIONS ###
@@ -49,7 +54,9 @@ def anonymize_packet(packet: Packet) -> None:
     Args:
         packet: scapy packet to anonymize
     """
-    global packets
+    global i, packets
+
+    logger.debug(f"Packet #{i}: {packet.summary()}")
 
     # Anonymize MAC addresses
     anonymize_pkt_macs(packet)
@@ -61,6 +68,7 @@ def anonymize_packet(packet: Packet) -> None:
     packet = rebuild_packet(packet)
 
     packets.append(packet)
+    i += 1
 
 
 def anonymize_pcap(input: os.PathLike, output: os.PathLike = None) -> None:
@@ -72,7 +80,7 @@ def anonymize_pcap(input: os.PathLike, output: os.PathLike = None) -> None:
         output: path to the output PCAP file.
                 If None, create a new file having the same name as the input file with the suffix '.anon.pcap'.
     """
-    global packets
+    global i, packets
 
     if output is None:
         output = str(Path(input).with_suffix(".anon.pcap"))
@@ -83,7 +91,8 @@ def anonymize_pcap(input: os.PathLike, output: os.PathLike = None) -> None:
     # Write anonymized packets to the output file
     wrpcap(output, packets)
 
-    # Reset global packets list
+    # Reset global variables
+    i = 1
     packets = []
 
 

@@ -37,5 +37,5 @@ def anonymize_app_layer(packet: Packet) -> None:
         dport = tcp.getfieldval("dport")
         if sport == 9999 or dport == 9999:
             anonymize_tplink(tcp)
-    except:
+    except AttributeError:
         pass
