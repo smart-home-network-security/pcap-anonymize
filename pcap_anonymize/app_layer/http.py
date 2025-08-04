@@ -71,17 +71,27 @@ def anonymize_http(http: HTTP) -> None:
     """
     # Remove request parameters
     if http.haslayer(HTTPRequest):
+
+        # Retrieve Path field
         try:
-            path = http.getfieldval(HttpFields.PATH.value).decode(ENCODING)
-            http.setfieldval(HttpFields.PATH.value, path.split("?")[0].encode(ENCODING))
+            path_bytes: bytes = http.getfieldval(HttpFields.PATH.value)
         except AttributeError:
             # HTTP packet does not contain the `Path` field
             logger.warning(f"Field {HttpFields.PATH.value} not found in HTTP layer {http.summary()}")
             pass
+
+        # Decode Path field
+        try:
+            path_str: str = path_bytes.decode(ENCODING)
         except UnicodeDecodeError:
             # `Path` field is not encoded in UTF-8
-            logger.warning(f"Field {HttpFields.PATH.value} not UTF-8 encoded in HTTP layer {http.summary()}")
+            logger.warning(f"Field {HttpFields.PATH.value} in HTTP layer not encoded with {ENCODING}: {path_bytes}")
             pass
+        else:
+            path_new = path_str.split("?")[0]  # Remove query parameters
+            path_new_encoded = path_new.encode(ENCODING)  # Re-encode the path
+            http.setfieldval(HttpFields.PATH.value, path_new_encoded)
+
 
     # Remove all fields other than Method and Path
     for field in http.fields.copy():
