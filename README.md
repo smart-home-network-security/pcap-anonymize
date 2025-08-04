@@ -1,4 +1,4 @@
-# pcap-anonymization
+# pcap-anonymize
 
 This Python package reads PCAP files,
 and produces anonymized versions of the given files.
